@@ -10,6 +10,8 @@ jupyter = "*"
 numpy = "*"
 pandas = "*"
 bokeh = "*"
+seaborn = "*"
+matplotlib = "*"
 
 [requires]
 python_version = "3.7"

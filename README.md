@@ -10,3 +10,6 @@ example repository "play button":
 
 examples:
 * https://ourworldindata.org/epi-curve-covid-19
+
+data source:
+ https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide
