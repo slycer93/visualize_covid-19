@@ -12,6 +12,8 @@ pandas = "*"
 bokeh = "*"
 seaborn = "*"
 matplotlib = "*"
+geopandas = "*"
+descartes = "*"
 
 [requires]
 python_version = "3.7"
