@@ -28,7 +28,7 @@ def load_data_geo():
 def filter_data_ecdc(df, iso_list):
     df_filtered = df[df.countryterritoryCode.isin(iso_list)]
 
-    frst_date = date.fromisoformat('2020-01-01')
+    frst_date = date.fromisoformat('2020-03-01')
     df_filtered = df_filtered[df_filtered.date >= frst_date]
 
     return df_filtered.copy().reset_index(drop = True)
@@ -51,3 +51,17 @@ def transform_to_date_dict(df):
     for date in dates:
         data[date] = df[df.date == date].copy().reset_index(drop = True)
     return data
+
+# instead of dates transform to days
+# if dateobject has problem with visualization
+def dates_to_days(df):
+    dates = list(sorted(df.date.unique()))
+    days = [i for i in range(1,len(dates) + 1)]
+    change = dict(zip(dates, days))
+
+    df['day'] = df.apply(lambda row: change[row['date']], axis = 1)
+    return df.copy().reset_index(drop = True)
+
+# sort dataframe by date
+def sort_by_date(df):
+    return df.sort_values(by=['date'])
