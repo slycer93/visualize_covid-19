@@ -13,3 +13,8 @@ examples:
 
 data source:
  https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide
+
+required:
+pip install nbserverproxy && jupyter serverextension enable --py nbserverproxy
+
+use DataSlider instead of Slider
