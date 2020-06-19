@@ -16,5 +16,3 @@ data source:
 
 required:
 pip install nbserverproxy && jupyter serverextension enable --py nbserverproxy
-
-use DataSlider instead of Slider
