@@ -3,83 +3,73 @@ import geopandas as gpd
 from datetime import date
 import json
 
-data_file_covid_ecdc = './data/U99TR3NJ.csv'
-data_file_geo_europe = './data/europe.geojson'
+geo_europe = './data/europe.geojson'
+ecdc_data = './data/U99TR3NJ.csv'
 
-def load_data():
-    # load geo data
-    geo_data, europe_iso_list = load_data_geo()
+class DataHandler():
+    def __init__(self):
+        self.date_range = [date.fromisoformat('2020-03-01')]
+        self.iso_list = []
+        self.geo_data = None
+        self.data = {}
+        self.fields = []
+        self._load()
 
-    # load first dataset
-    data_ecdc = load_data_ecdc()
-    # filter for european data and date 2020
-    covid_data = filter_by_iso(data_ecdc, europe_iso_list)
-    # transform to dictionary by date
-    covid_data, dates = transform_to_date_dict(covid_data)
+    def initial_view(self):
+        df_initial = self.data[self.date_range[0]]
+        df_initial = df_initial.rename(columns={self.fields[0]: 'line_1', self.fields[1]: 'line_2'})
+        return self.europe_view(df_initial)
 
-    return covid_data, geo_data, dates
+    def europe_view(self, df):
+        return df.groupby(['date']).sum().reset_index()
 
-def europe_view(df):
-    return df.groupby(['date']).sum().reset_index()
+    def update_view(self, date, field_1, field_2, iso = 'EUR'):
+        df_date = self.data[date]
+        df = df_date.loc[:,['date', 'ISO3', field_1]].rename(columns={field_1: 'line_1'})
+        df = pd.concat([df, df_date.loc[:,field_2]], axis = 1)
+        df = df.rename(columns={field_2: 'line_2'})
+        if iso == 'EUR':
+            return self.europe_view(df)
+        else:
+            return df[df['ISO3'] == iso]
 
-def load_data_ecdc():
-    df = pd.read_csv(data_file_covid_ecdc)
-    df = df.rename(columns={'countryterritoryCode': 'ISO3', 'popData2018': 'population'})
-    df['date'] = df.apply(lambda row: date(year = row['year'], month = row['month'], day = row['day']), axis = 1)
-    return df.drop(columns=['dateRep', 'day', 'month', 'year', 'geoId', 'continentExp'])
+    def _load(self):
+        self._load_data_geo()
 
-def load_data_geo():
-    gdf = gpd.read_file(data_file_geo_europe)
-    gdf = gdf[gdf['ISO2'] != 'IL'] # remove Israel
-    europe_iso_list = list(gdf.ISO3)
-    return gdf, europe_iso_list
+        # load first dataset
+        data_ecdc, fields_ecdc = self._load_data_ecdc()
+        # TODO: add more data
+        data_all = data_ecdc
+        self.fields += fields_ecdc
 
-def filter_by_iso(df, iso_list):
-    df_filtered = df[df.ISO3.isin(iso_list)]
+        self._transform_to_date_dict(data_all)
 
-    frst_date = date.fromisoformat('2020-03-01')
-    df_filtered = df_filtered[df_filtered.date >= frst_date]
+    def _load_data_geo(self):
+        gdf = gpd.read_file(geo_europe)
+        gdf = gdf[gdf['ISO2'] != 'IL'] # remove Israel
+        self.iso_list = list(gdf.ISO3)
+        self.geo_data = gdf
 
-    return df_filtered.copy().reset_index(drop = True)
+    def _filter_europe(self, df):
+        return df[df.ISO3.isin(self.iso_list)]
 
-# function to color chloropleth by
-def geo_data_colors(gdf, df):
-    color_by = ['cases', 'deaths']
+    def _filter_date(self, df):
+        return df[df.date >= self.date_range[0]]
 
-# transrorm the covid data into a dictionary by date
-def transform_to_date_dict(df):
-    data = {}
+    def _transform_to_date_dict(self, df):
+        dates = list(sorted(df.date.unique()))
+        for date in dates:
+            self.data[date] = df[df.date <= date].copy().reset_index(drop = True)
+        self.date_range.append(dates[-1])
 
-    dates = list(sorted(df.date.unique()))
-    for date in dates:
-        data[date] = df[df.date <= date].copy().reset_index(drop = True)
-    return data, dates
-
-# old unused functions from here on-->
-
-# load without geopandas
-def load_data_geo_old():
-    data = None
-    with open(data_file_geo_europe) as f:
-        data = json.load(f)
-    return json.dumps(data)
-
-def create_dates_list(df):
-    dates = list(sorted(df.date.unique()))
-    days = [i for i in range(0,len(dates))]
-    dates = dict(zip(days, dates))
-    return dates
-
-# instead of dates transform to days
-# if dateobject has problem with visualization
-def dates_to_days(df):
-    dates = list(sorted(df.date.unique()))
-    days = [i for i in range(1,len(dates) + 1)]
-    change = dict(zip(dates, days))
-
-    df['day'] = df.apply(lambda row: change[row['date']], axis = 1)
-    return df.copy().reset_index(drop = True)
-
-# sort dataframe by date
-def sort_by_date(df):
-    return df.sort_values(by=['date'])
+    def _load_data_ecdc(self):
+        df = pd.read_csv(ecdc_data)
+        df = df.rename(columns={'countryterritoryCode': 'ISO3', 'popData2018': 'population'})
+        # create datetime objs
+        df['date'] = df.apply(lambda row: date(year = row['year'], month = row['month'], day = row['day']), axis = 1)
+        # drop unneeded columns
+        df = df.drop(columns=['dateRep', 'day', 'month', 'year', 'geoId', 'continentExp'])
+        # filters
+        df = self._filter_europe(df)
+        df = self._filter_date(df)
+        return df, ['cases', 'deaths']
