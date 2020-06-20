@@ -8,10 +8,12 @@ ecdc_data = './data/U99TR3NJ.csv'
 
 class DataHandler():
     def __init__(self):
-        self.date_range = [date.fromisoformat('2020-03-01')]
+        self.date_range = [date.fromisoformat('2020-03-01')] # first date
+        self.dates = []
         self.iso_list = []
         self.geo_data = None
         self.data = {}
+        self.data_all_dates = []
         self.fields = []
         self._load()
 
@@ -35,6 +37,9 @@ class DataHandler():
 
     def _load(self):
         self._load_data_geo()
+        self._preprocess_data_geo()
+        # create iso list of european countrys
+        self.iso_list = list(self.geo_data.ISO3)
 
         # load first dataset
         data_ecdc, fields_ecdc = self._load_data_ecdc()
@@ -43,12 +48,19 @@ class DataHandler():
         self.fields += fields_ecdc
 
         self._transform_to_date_dict(data_all)
+        # dataframe for all dates is contained in the data of the last date
+        self.data_all_dates = self.data[self.date_range[1]]
 
     def _load_data_geo(self):
-        gdf = gpd.read_file(geo_europe)
-        gdf = gdf[gdf['ISO2'] != 'IL'] # remove Israel
-        self.iso_list = list(gdf.ISO3)
-        self.geo_data = gdf
+        self.geo_data = gpd.read_file(geo_europe)
+
+    def _preprocess_data_geo(self):
+        # remove Israel
+        self.geo_data = self.geo_data[self.geo_data['ISO2'] != 'IL']
+        # rename needed columns
+        self.geo_data = self.geo_data.rename(columns={'NAME': 'country'})
+        # keep only needed columns
+        self.geo_data = self.geo_data.loc[:,['ISO3', 'country', 'geometry']].copy()
 
     def _filter_europe(self, df):
         return df[df.ISO3.isin(self.iso_list)]
@@ -60,6 +72,9 @@ class DataHandler():
         dates = list(sorted(df.date.unique()))
         for date in dates:
             self.data[date] = df[df.date <= date].copy().reset_index(drop = True)
+
+        # set dates to obj variables
+        self.dates = dates
         self.date_range.append(dates[-1])
 
     def _load_data_ecdc(self):
