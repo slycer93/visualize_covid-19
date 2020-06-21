@@ -17,6 +17,7 @@ class DataHandler():
         self.data = {}
         self.data_all_dates = []
         self.fields = []
+        self.y_range_end = {}
         self._load()
 
     def initial_view(self):
@@ -35,7 +36,7 @@ class DataHandler():
         if iso == 'EUR':
             return self.europe_view(df)
         else:
-            return df[df['ISO3'] == iso]
+            return df[df['ISO3'] == iso].copy()
 
     def _load(self):
         self._load_data_geo()
@@ -52,6 +53,8 @@ class DataHandler():
         self._transform_to_date_dict(data_all)
         # dataframe for all dates is contained in the data of the last date
         self.data_all_dates = self.data[self.date_range[1]]
+        # find max y ranges from data
+        self._find_y_range_end()
 
     def _load_data_restrictions(self):
         df_raw=pd.read_excel(restrictions, sheet_name='Database')
@@ -84,6 +87,22 @@ class DataHandler():
         # set dates to obj variables
         self.dates = dates
         self.date_range.append(dates[-1])
+
+    def _find_y_range_end(self):
+        df = self.data_all_dates
+        self.y_range_end['EUR'] = self._get_max_value(self.europe_view(df), self.fields)
+        for iso in self.iso_list:
+            df_iso = df[df['ISO3'] == iso]
+            self.y_range_end[iso] = self._get_max_value(df_iso, self.fields)
+
+    def _get_max_value(self, df, columns):
+        max_values = {}
+        for column in columns:
+            max = df[column].max()
+            if max < 10:
+                max = 10
+            max_values[column] = max
+        return max_values
 
     def _load_data_ecdc(self):
         df = pd.read_csv(ecdc_data)
