@@ -22,17 +22,21 @@ class DataHandler():
 
     def initial_view(self):
         df_initial = self.data[self.date_range[0]]
-        df_initial = df_initial.rename(columns={self.fields[0]: 'line_1', self.fields[1]: 'line_2'})
+        df_initial = df_initial.rename(columns={self.fields[0]: 'line_1', self.fields[1]: 'line_2','Cumulated Restrictions':'line_3'})
         return self.europe_view(df_initial)
 
     def europe_view(self, df):
         return df.groupby(['date']).sum().reset_index()
 
-    def update_view(self, date, field_1, field_2, iso = 'EUR'):
+    def update_view(self, date, field_1, field_2, iso = 'EUR',category='Public health measures'):
         df_date = self.data[date]
         df = df_date.loc[:,['date', 'ISO3', field_1]].rename(columns={field_1: 'line_1'})
         df = pd.concat([df, df_date.loc[:,field_2]], axis = 1)
         df = df.rename(columns={field_2: 'line_2'})
+        df = pd.concat([df, df_date[df_date['CATEGORY']==category]['Cumulated Restrictions']], axis = 1).fillna(method='bfill')
+        df = df.rename(columns={'Cumulated Restrictions': 'line_3'})
+        
+        
         if iso == 'EUR':
             return self.europe_view(df)
         else:
@@ -46,9 +50,13 @@ class DataHandler():
 
         # load first dataset
         data_ecdc, fields_ecdc = self._load_data_ecdc()
+        df_restriction,categories=self._load_data_restrictions()
         # TODO: add more data
-        data_all = data_ecdc
+        data_all=pd.merge(data_ecdc, df_restriction,  how='left', left_on=['ISO3','date'], right_on = ['ISO','DATE_IMPLEMENTED']).fillna(method='bfill')
+
+        #data_all = data_ecdc
         self.fields += fields_ecdc
+        self.fields += ['Cumulated Restrictions']
 
         self._transform_to_date_dict(data_all)
         # dataframe for all dates is contained in the data of the last date
@@ -60,8 +68,10 @@ class DataHandler():
 
     def _load_data_restrictions(self):
         df_raw=pd.read_excel(restrictions, sheet_name='Database')
-        df=df_raw.groupby(['ISO','CATEGORY', 'DATE_IMPLEMENTED']).count().groupby(level=0).cumsum().reset_index().filter(["ISO","CATEGORY","DATE_IMPLEMENTED","ID"])\
-        .rename(columns={'ID': 'No. Restrictions'})
+        df_raw['DATE_IMPLEMENTED']=df_raw['DATE_IMPLEMENTED'].apply(pd.to_datetime).dt.date
+        df_raw['No. Restrictions']=1
+        df=df_raw.filter(["ISO","CATEGORY","DATE_IMPLEMENTED","No. Restrictions"]).groupby(['ISO','CATEGORY', 'DATE_IMPLEMENTED']).count().reset_index()
+        df['Cumulated Restrictions']=df.groupby(['ISO','CATEGORY']).cumsum()
         return df, df.CATEGORY.unique()
 
     def _load_data_geo(self):
