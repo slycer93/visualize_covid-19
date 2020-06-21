@@ -5,6 +5,7 @@ import json
 
 geo_europe = './data/europe.geojson'
 ecdc_data = './data/U99TR3NJ.csv'
+restrictions = './data/acaps_covid19_government_measures_dataset.xlsx'
 
 class DataHandler():
     def __init__(self):
@@ -12,6 +13,7 @@ class DataHandler():
         self.dates = []
         self.iso_list = []
         self.geo_data = None
+        self.restriction_data=None
         self.data = {}
         self.data_all_dates = []
         self.fields = []
@@ -50,6 +52,12 @@ class DataHandler():
         self._transform_to_date_dict(data_all)
         # dataframe for all dates is contained in the data of the last date
         self.data_all_dates = self.data[self.date_range[1]]
+
+    def _load_data_restrictions(self):
+        df_raw=pd.read_excel(restrictions, sheet_name='Database')
+        df=df_raw.groupby(['ISO','CATEGORY', 'DATE_IMPLEMENTED']).count().groupby(level=0).cumsum().reset_index().filter(["ISO","CATEGORY","DATE_IMPLEMENTED","ID"])
+
+        return df
 
     def _load_data_geo(self):
         self.geo_data = gpd.read_file(geo_europe)

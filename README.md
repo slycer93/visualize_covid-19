@@ -17,3 +17,4 @@ data sources:
 
 required:
 pip install nbserverproxy && jupyter serverextension enable --py nbserverproxy
+pip install xlrd
