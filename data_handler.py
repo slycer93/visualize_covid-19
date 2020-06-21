@@ -55,9 +55,9 @@ class DataHandler():
 
     def _load_data_restrictions(self):
         df_raw=pd.read_excel(restrictions, sheet_name='Database')
-        df=df_raw.groupby(['ISO','CATEGORY', 'DATE_IMPLEMENTED']).count().groupby(level=0).cumsum().reset_index().filter(["ISO","CATEGORY","DATE_IMPLEMENTED","ID"])
-
-        return df
+        df=df_raw.groupby(['ISO','CATEGORY', 'DATE_IMPLEMENTED']).count().groupby(level=0).cumsum().reset_index().filter(["ISO","CATEGORY","DATE_IMPLEMENTED","ID"])\
+        .rename(columns={'ID': 'No. Restrictions'})
+        return df, df.CATEGORY.unique()
 
     def _load_data_geo(self):
         self.geo_data = gpd.read_file(geo_europe)
