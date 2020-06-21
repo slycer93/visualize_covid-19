@@ -55,6 +55,8 @@ class DataHandler():
         self.data_all_dates = self.data[self.date_range[1]]
         # find max y ranges from data
         self._find_y_range_end()
+        # add fields to the geo_dataframe
+        self._add_fields_to_geo_data()
 
     def _load_data_restrictions(self):
         df_raw=pd.read_excel(restrictions, sheet_name='Database')
@@ -103,6 +105,11 @@ class DataHandler():
                 max = 10
             max_values[column] = max
         return max_values
+
+    def _add_fields_to_geo_data(self):
+        fields = [*self.fields, 'ISO3']
+        data_europe = self.data_all_dates.groupby(['ISO3']).sum().reset_index().loc[:,fields]
+        self.geo_data = self.geo_data.join(data_europe.set_index('ISO3'), on='ISO3')
 
     def _load_data_ecdc(self):
         df = pd.read_csv(ecdc_data)
