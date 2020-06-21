@@ -56,7 +56,7 @@ class DataHandler():
 
         #data_all = data_ecdc
         self.fields += fields_ecdc
-        self.fields += ['Cumulated Restrictions']
+        self.fields += ['Cumulated Restrictions overall']
 
         self._transform_to_date_dict(data_all)
         # dataframe for all dates is contained in the data of the last date
@@ -72,6 +72,7 @@ class DataHandler():
         df_raw['No. Restrictions']=1
         df=df_raw.filter(["ISO","CATEGORY","DATE_IMPLEMENTED","No. Restrictions"]).groupby(['ISO','CATEGORY', 'DATE_IMPLEMENTED']).count().reset_index()
         df['Cumulated Restrictions']=df.groupby(['ISO','CATEGORY']).cumsum()
+        df['Cumulated Restrictions overall']=df.groupby(['ISO']).cumsum()['No. Restrictions']
         return df, df.CATEGORY.unique()
 
     def _load_data_geo(self):
