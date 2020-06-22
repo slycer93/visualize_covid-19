@@ -22,21 +22,17 @@ class DataHandler():
 
     def initial_view(self):
         df_initial = self.data[self.date_range[0]]
-        df_initial = df_initial.rename(columns={self.fields[0]: 'line_1', self.fields[1]: 'line_2','Cumulated Restrictions':'line_3'})
+        df_initial = df_initial.rename(columns={self.fields[0]: 'line', self.fields[1]: 'restr','Cumulated Restrictions':'line_3'})
         return self.europe_view(df_initial)
 
     def europe_view(self, df):
         return df.groupby(['date']).sum().reset_index()
 
-    def update_view(self, date, field_1, field_2, iso = 'EUR',category='Public health measures'):
+    def update_view(self, date, field, category='Public health measures', iso = 'EUR'):
         df_date = self.data[date]
-        df = df_date.loc[:,['date', 'ISO3', field_1]].rename(columns={field_1: 'line_1'})
-        df = pd.concat([df, df_date.loc[:,field_2]], axis = 1)
-        df = df.rename(columns={field_2: 'line_2'})
+        df = df_date.loc[:,['date', 'ISO3', field]].rename(columns={field: 'line'})
         df = pd.concat([df, df_date[df_date['CATEGORY']==category]['Cumulated Restrictions']], axis = 1).fillna(method='bfill')
-        df = df.rename(columns={'Cumulated Restrictions': 'line_3'})
-        
-        
+        df = df.rename(columns={'Cumulated Restrictions': 'restr'})
         if iso == 'EUR':
             return self.europe_view(df)
         else:
