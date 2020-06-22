@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "d74a2abf108337ac514648fb572ef4f24f68fce04c0832663cf32c84635f1cfa"
+            "sha256": "202118ca2b85034bc71a29ff5d4eae252671e3fd4830970e9c9ab2c21544196f"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -339,6 +339,14 @@
             ],
             "version": "==5.0.7"
         },
+        "nbserverproxy": {
+            "hashes": [
+                "sha256:23558fa1efe42fa0a832a4e69eb9743e5b8724d95cc17ce38b5f8ede1d21020f",
+                "sha256:e31c3798e8a9b1e231e38dead2e26b2796dd62ce98cdd434f1b5e53e390b2f66"
+            ],
+            "index": "pypi",
+            "version": "==0.8.8"
+        },
         "notebook": {
             "hashes": [
                 "sha256:3edc616c684214292994a3af05eaea4cc043f6b4247d830f3a2f209fa7639a80",
@@ -611,10 +619,10 @@
         },
         "qtconsole": {
             "hashes": [
-                "sha256:89442727940126c65c2f94a058f1b4693a0f5d4c4b192fd6518ba3b11f4791aa",
-                "sha256:fd48bf1051d6e69cec1f9e2596cfaa94e3c726c70c5d848681ebce10c029f5fd"
+                "sha256:4f43d0b049eacb7d723772847f0c465feccce0ccb398871a6e146001a22bad23",
+                "sha256:f5cb275d30fc8085e2d1d18bc363e5ba0ce6e559bf37d7d6727b773134298754"
             ],
-            "version": "==4.7.4"
+            "version": "==4.7.5"
         },
         "qtpy": {
             "hashes": [

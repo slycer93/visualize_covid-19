@@ -17,6 +17,7 @@ descartes = "*"
 xlrd = "*"
 sklearn = "*"
 colorcet = "*"
+nbserverproxy = "*"
 
 [requires]
 python_version = "3.7"
