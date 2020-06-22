@@ -19,23 +19,22 @@ class DataHandler():
         self.data = {}
         self.data_all_dates = []
         self.fields = []
+        self.restriction_fields = []
         self.color_fields = ['Cases by population', 'Deaths by population', 'Deaths by cases']
         self.y_range_end = {}
         self._load()
 
     def initial_view(self):
         df_initial = self.data[self.date_range[0]]
-        df_initial = df_initial.rename(columns={self.fields[0]: 'line', self.fields[1]: 'restr','Cumulated Restrictions':'line_3'})
+        df_initial = df_initial.rename(columns={self.fields[0]: 'line', self.restriction_fields[0]: 'restr'})
         return self.europe_view(df_initial)
 
     def europe_view(self, df):
         return df.groupby(['date']).sum().reset_index()
 
-    def update_view(self, date, field, category='Public health measures', iso = 'EUR'):
+    def update_view(self, date, field, category='All restrictions', iso = 'EUR'):
         df_date = self.data[date]
-        df = df_date.loc[:,['date', 'ISO3', field]].rename(columns={field: 'line'})
-        df = pd.concat([df, df_date[df_date['CATEGORY']==category]['Cumulated Restrictions']], axis = 1).fillna(method='bfill')
-        df = df.rename(columns={'Cumulated Restrictions': 'restr'})
+        df = df_date.loc[:,['date', 'ISO3', field, category]].rename(columns={field: 'line', category: 'restr'})
         if iso == 'EUR':
             return self.europe_view(df)
         else:
@@ -47,22 +46,23 @@ class DataHandler():
         # create iso list of european countrys
         self.iso_list = list(self.geo_data.ISO3)
 
-        # load first dataset
+        # load datasets
         data_ecdc, fields_ecdc = self._load_data_ecdc()
-        df_restriction,categories=self._load_data_restrictions()
-        # TODO: add more data
-        data_all=pd.merge(data_ecdc, df_restriction,  how='left', left_on=['ISO3','date'], right_on = ['ISO3','DATE_IMPLEMENTED']).fillna(method='bfill')
+        df_restriction, fields_restr = self._load_data_restrictions()
 
-        #data_all = data_ecdc
-        self.fields += fields_ecdc
-        self.fields += ['Cumulated Restrictions Overall']
+        # set fields for selectors
+        self.fields = fields_ecdc
+        self.restriction_fields = fields_restr
+
+        # combine restrictions data to other data
+        data_all = self._combine_data(data_ecdc, df_restriction, fields_restr)
 
         self._transform_to_date_dict(data_all)
         # dataframe for all dates is contained in the data of the last date
         self.data_all_dates = self.data[self.date_range[1]]
         # create iso_country dict
         self.country_iso = self.data_all_dates.loc[:, ['ISO3', 'countriesAndTerritories']].drop_duplicates().set_index('countriesAndTerritories').T.to_dict('records')[0]
-        self.country_iso['Europe'] = 'EUR'
+        self.country_iso = {**{'Europe': 'EUR'}, **self.country_iso}
         # find max y ranges from data
         self._find_y_range_end()
         # add fields to the geo_dataframe
@@ -76,7 +76,20 @@ class DataHandler():
         df=df_raw.filter(["ISO3","CATEGORY","DATE_IMPLEMENTED","No. Restrictions"]).groupby(['ISO3','CATEGORY', 'DATE_IMPLEMENTED']).count().reset_index()
         df['Cumulated Restrictions']=df.groupby(['ISO3','CATEGORY']).cumsum()
         df['Cumulated Restrictions Overall']=df.groupby(['ISO3']).cumsum()['No. Restrictions']
-        return df, df.CATEGORY.unique()
+        return df, list(df.CATEGORY.unique())
+
+    def _combine_data(self, de, dr, categories):
+        df_all = de
+        dr = dr.rename(columns={'DATE_IMPLEMENTED': 'date'})
+        for category in categories:
+            dr_cat = dr[dr['CATEGORY'] == category]
+            dr_cat = dr_cat.loc[:,['ISO3', 'date', 'Cumulated Restrictions Overall']].rename(columns={'Cumulated Restrictions Overall': category})
+            df_all = pd.merge(df_all, dr_cat,  how='left', left_on=['ISO3','date'], right_on = ['ISO3','date'])
+        df_all = df_all.fillna(method='bfill')
+        df_all = df_all.fillna(method='ffill')
+        df_all['All restrictions'] = df_all.apply(lambda row: row[categories].sum() , axis = 1)
+        self.restriction_fields.insert(0, 'All restrictions')
+        return df_all
 
     def _load_data_geo(self):
         self.geo_data = gpd.read_file(geo_europe)
@@ -106,10 +119,11 @@ class DataHandler():
 
     def _find_y_range_end(self):
         df = self.data_all_dates
-        self.y_range_end['EUR'] = self._get_max_value(self.europe_view(df), self.fields)
+        fields = self.fields + self.restriction_fields
+        self.y_range_end['EUR'] = self._get_max_value(self.europe_view(df), fields)
         for iso in self.iso_list:
             df_iso = df[df['ISO3'] == iso]
-            self.y_range_end[iso] = self._get_max_value(df_iso, self.fields)
+            self.y_range_end[iso] = self._get_max_value(df_iso, fields)
 
     def _get_max_value(self, df, columns):
         max_values = {}
@@ -117,11 +131,11 @@ class DataHandler():
             max = df[column].max()
             if max < 10:
                 max = 10
-            max_values[column] = max
+            max_values[column] = max * 1.15
         return max_values
 
     def _add_fields_to_geo_data(self):
-        fields = [*self.fields, 'ISO3']
+        fields = [*self.fields, 'ISO3', 'All restrictions']
         data_europe = self.data_all_dates.groupby(['ISO3']).sum().reset_index().loc[:,fields]
         self.geo_data = self.geo_data.join(data_europe.set_index('ISO3'), on='ISO3')
         population = self.data_all_dates.loc[:,['ISO3', 'population']].drop_duplicates()
@@ -130,7 +144,9 @@ class DataHandler():
             cf = color_field.lower().split(' ')
             self.geo_data[color_field] = self.geo_data.apply(lambda row: row[cf[0]] / row[cf[-1]], axis = 1)
             self.geo_data[color_field] = minmax_scale(self.geo_data[color_field], feature_range=(0, 100))
-        self.color_fields.append('Cumulated Restrictions Overall')
+        self.geo_data['all_restr'] = self.geo_data['All restrictions']
+        self.geo_data['All restrictions'] = minmax_scale(self.geo_data['All restrictions'], feature_range=(0, 100))
+        self.color_fields.append('All restrictions')
 
     def _load_data_ecdc(self):
         df = pd.read_csv(ecdc_data)
