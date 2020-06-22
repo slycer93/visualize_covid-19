@@ -1,20 +1,19 @@
-run environment:
+# Visualization of Covid-19 in Europe
+
+This project visualizes restrictions, cases and deaths for the Covid-19 pandemie in Europe. The visualization uses a automated slider to inspect data by day and selectors to change the visualized data and country. It also drows a chloropleth for the data at the last date.
+
+## Run Notebook with Bokeh server:
+
 1. pipenv install
-2. pipenv shell
+2. pipenv run jupyter serverextension enable --py nbserverproxy
+3. pipenv run jupyter notebook
 
-run notebook:
-* pipenv run jupyter notebook
+## Data Sources:
 
-example repository "play button":
-* https://github.com/bokeh/bokeh/blob/master/examples/app/gapminder/main.py
+### Cases and Deaths by day:
 
-examples:
-* https://ourworldindata.org/epi-curve-covid-19
-
-data sources:
 * https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide
-* https://www.acaps.org/covid19-government-measures-dataset
 
-required:
-pip install nbserverproxy && jupyter serverextension enable --py nbserverproxy
-pip install xlrd
+### Restrictions:
+
+* https://www.acaps.org/covid19-government-measures-dataset
