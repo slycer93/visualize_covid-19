@@ -2,6 +2,7 @@ import pandas as pd
 import geopandas as gpd
 from datetime import date
 import json
+from sklearn.preprocessing import minmax_scale
 
 geo_europe = './data/europe.geojson'
 ecdc_data = './data/U99TR3NJ.csv'
@@ -18,6 +19,7 @@ class DataHandler():
         self.data = {}
         self.data_all_dates = []
         self.fields = []
+        self.color_fields = ['Cases by population', 'Deaths by population', 'Deaths by cases']
         self.y_range_end = {}
         self._load()
 
@@ -49,11 +51,11 @@ class DataHandler():
         data_ecdc, fields_ecdc = self._load_data_ecdc()
         df_restriction,categories=self._load_data_restrictions()
         # TODO: add more data
-        data_all=pd.merge(data_ecdc, df_restriction,  how='left', left_on=['ISO3','date'], right_on = ['ISO','DATE_IMPLEMENTED']).fillna(method='bfill')
+        data_all=pd.merge(data_ecdc, df_restriction,  how='left', left_on=['ISO3','date'], right_on = ['ISO3','DATE_IMPLEMENTED']).fillna(method='bfill')
 
         #data_all = data_ecdc
         self.fields += fields_ecdc
-        self.fields += ['Cumulated Restrictions overall']
+        self.fields += ['Cumulated Restrictions Overall']
 
         self._transform_to_date_dict(data_all)
         # dataframe for all dates is contained in the data of the last date
@@ -70,9 +72,10 @@ class DataHandler():
         df_raw=pd.read_excel(restrictions, sheet_name='Database')
         df_raw['DATE_IMPLEMENTED']=df_raw['DATE_IMPLEMENTED'].apply(pd.to_datetime).dt.date
         df_raw['No. Restrictions']=1
-        df=df_raw.filter(["ISO","CATEGORY","DATE_IMPLEMENTED","No. Restrictions"]).groupby(['ISO','CATEGORY', 'DATE_IMPLEMENTED']).count().reset_index()
-        df['Cumulated Restrictions']=df.groupby(['ISO','CATEGORY']).cumsum()
-        df['Cumulated Restrictions overall']=df.groupby(['ISO']).cumsum()['No. Restrictions']
+        df_raw = df_raw.rename(columns={'ISO': 'ISO3'})
+        df=df_raw.filter(["ISO3","CATEGORY","DATE_IMPLEMENTED","No. Restrictions"]).groupby(['ISO3','CATEGORY', 'DATE_IMPLEMENTED']).count().reset_index()
+        df['Cumulated Restrictions']=df.groupby(['ISO3','CATEGORY']).cumsum()
+        df['Cumulated Restrictions Overall']=df.groupby(['ISO3']).cumsum()['No. Restrictions']
         return df, df.CATEGORY.unique()
 
     def _load_data_geo(self):
@@ -121,6 +124,13 @@ class DataHandler():
         fields = [*self.fields, 'ISO3']
         data_europe = self.data_all_dates.groupby(['ISO3']).sum().reset_index().loc[:,fields]
         self.geo_data = self.geo_data.join(data_europe.set_index('ISO3'), on='ISO3')
+        population = self.data_all_dates.loc[:,['ISO3', 'population']].drop_duplicates()
+        self.geo_data = self.geo_data.join(population.set_index('ISO3'), on='ISO3')
+        for color_field in self.color_fields:
+            cf = color_field.lower().split(' ')
+            self.geo_data[color_field] = self.geo_data.apply(lambda row: row[cf[0]] / row[cf[-1]], axis = 1)
+            self.geo_data[color_field] = minmax_scale(self.geo_data[color_field], feature_range=(0, 100))
+        self.color_fields.append('Cumulated Restrictions Overall')
 
     def _load_data_ecdc(self):
         df = pd.read_csv(ecdc_data)
