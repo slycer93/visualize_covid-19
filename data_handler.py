@@ -12,6 +12,7 @@ class DataHandler():
         self.date_range = [date.fromisoformat('2020-03-01')] # first date
         self.dates = []
         self.iso_list = []
+        self.country_iso = {}
         self.geo_data = None
         self.restriction_data=None
         self.data = {}
@@ -57,6 +58,9 @@ class DataHandler():
         self._transform_to_date_dict(data_all)
         # dataframe for all dates is contained in the data of the last date
         self.data_all_dates = self.data[self.date_range[1]]
+        # create iso_country dict
+        self.country_iso = self.data_all_dates.loc[:, ['ISO3', 'countriesAndTerritories']].drop_duplicates().set_index('countriesAndTerritories').T.to_dict('records')[0]
+        self.country_iso['Europe'] = 'EUR'
         # find max y ranges from data
         self._find_y_range_end()
         # add fields to the geo_dataframe
