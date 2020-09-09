@@ -20,4 +20,4 @@ This project visualizes restrictions, cases and deaths for the Covid-19 pandemie
 
 ## Visualization Example:
 
-[Alt text](Example_image.png?raw=true "Dashboard")
+![Alt text](Example_image.png?raw=true "Dashboard")
