@@ -17,3 +17,7 @@ This project visualizes restrictions, cases and deaths for the Covid-19 pandemie
 ### Restrictions:
 
 * https://www.acaps.org/covid19-government-measures-dataset
+
+## Visualization Example:
+
+[Alt text](Example_image.png?raw=true "Dashboard")
